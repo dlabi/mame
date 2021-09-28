@@ -651,7 +651,6 @@ void m5_state::mem64KBI_w(offs_t offset, u8 data) //out 0x6c
 {
 	if (m_ram_type != MEM64KBI) return;
 
-#if 0 // FIXME: disabled for now
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
@@ -681,7 +680,7 @@ void m5_state::mem64KBI_w(offs_t offset, u8 data) //out 0x6c
 		else
 			program.unmap_readwrite(0x2000, 0x3fff);
 	}
-#endif
+
 
 	logerror("64KBI: ROM %s", m_ram_mode == 0 ? "enabled\n" : "disabled\n");
 }
@@ -694,7 +693,7 @@ void m5_state::mem64KBF_w(u8 data) //out 0x30
 {
 	if (m_ram_type != MEM64KBF) return;
 
-#if 0 // FIXME: disabled for now
+
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str()); //ROM region of the cart
@@ -800,7 +799,6 @@ void m5_state::mem64KBF_w(u8 data) //out 0x30
 			membank("bank6r")->set_base(rom_region->base()+0xc000);     membank("bank6w")->set_base(rom_region->base()+0xc000);
 			break;
 	}
-#endif
 
 	logerror("64KBF RAM mode set to %d\n", m_ram_mode);
 }
@@ -814,7 +812,6 @@ void m5_state::mem64KRX_w(offs_t offset, u8 data) //out 0x7f
 	if (m_ram_type != MEM64KRX) return;
 	if (m_ram_mode == data) return;
 
-#if 0 // FIXME: disabled for now
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
@@ -843,7 +840,6 @@ void m5_state::mem64KRX_w(offs_t offset, u8 data) //out 0x7f
 		program.install_read_handler(0x2000, 0x6fff, read8sm_delegate(*m_cart, FUNC(m5_cart_slot_device::read_rom)));
 		program.unmap_write(0x2000, 0x6fff);
 	}
-#endif
 
 	logerror("64KRX RAM mode set to %02x\n", m_ram_mode);
 }
@@ -1361,7 +1357,7 @@ void m5_state::machine_reset()
 		m_ram_type=m_cart_ram->get_type();
 
 		m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
-		//memory_region *ram_region = memregion(region_tag.assign(m_cart_ram->tag()).append(":ram").c_str());
+		memory_region *ram_region = memregion(region_tag.assign(m_cart_ram->tag()).append(":ram").c_str());
 
 		switch (m_ram_type)
 		{
@@ -1375,7 +1371,7 @@ void m5_state::machine_reset()
 					program.unmap_write(0x2000, 0x6fff);
 				}
 				break;
-#if 0 // FIXME: disabled for now
+
 			case MEM64KBI:
 				program.install_rom(0x0000, 0x1fff, memregion("maincpu")->base());
 				program.unmap_write(0x0000, 0x1fff);
@@ -1418,7 +1414,7 @@ void m5_state::machine_reset()
 					membank("bank6r")->set_base(m_cart_rom->base()+0x12000); membank("bank6w")->set_base(ram_region->base()+0xc000);
 				}
 				break;
-#endif
+
 			default:
 				program.unmap_readwrite(0x8000, 0xffff);
 		}
