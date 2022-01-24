@@ -1429,6 +1429,7 @@ void m5_state::machine_reset()
 			program.unmap_write(0x0000, 0x1fff);
 			program.install_read_handler(0x2000, 0x6fff, read8sm_delegate(*m_cart, FUNC(m5_cart_slot_device::read_rom)));
 			program.unmap_write(0x2000, 0x6fff);
+			program.unmap_readwrite(0x8000, 0xffff);
 		}
 	m_ram_mode=0;
 }
@@ -1669,10 +1670,10 @@ ROM_END
 //-------------------------------------------------
 
 ROM_START( m5p_brno )
-	ROM_REGION( 0x4000, "maincpu", 0 )
+	ROM_REGION( 0x7000, "maincpu", 0 )
 	ROM_LOAD( "sordint.ic21", 0x0000, 0x2000, CRC(78848d39) SHA1(ac042c4ae8272ad6abe09ae83492ef9a0026d0b2)) // monitor rom
-	ROM_LOAD( "brno_win.rom", 0x2000, 0x2000, CRC(f4cfb2ee) SHA1(23f41d2d9ac915545409dd0163f3dc298f04eea2)) //windows
-	//ROM_LOAD( "brno_rom12.rom", 0x2000, 0x4000, CRC(cac52406) SHA1(91f6ba97e85a2b3a317689635d425ee97413bbe3)) //windows+BI
+	//ROM_LOAD( "brno_win.rom", 0x2000, 0x2000, CRC(f4cfb2ee) SHA1(23f41d2d9ac915545409dd0163f3dc298f04eea2)) //windows
+	ROM_LOAD( "brno_rom12.rom", 0x2000, 0x4000, CRC(cac52406) SHA1(91f6ba97e85a2b3a317689635d425ee97413bbe3)) //windows+BI
 	//ROM_LOAD( "brno_boot.rom", 0x2000, 0xd80, CRC(60008729) SHA1(fb26e2ae9f74b0ae0d723b417a038a8ef3d72782))
 ROM_END
 

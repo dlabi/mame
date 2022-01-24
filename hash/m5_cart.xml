@@ -633,7 +633,6 @@ come from... they might be eventually removed -->
 	</software>
 
 <!-- Homebrew memory modules -->
-
 	<software name="64kbi">
 		<description>EM-64 Expansion memory 64Kb</description>
 		<year>198?</year>
@@ -679,7 +678,6 @@ come from... they might be eventually removed -->
 	</software>
 
 	<!-- Brno mod ROMs -->
-
 	<software name="brno_con">
 		<description>Boot for Brno ramdisk [console version]</description>
 		<year>1989</year>
