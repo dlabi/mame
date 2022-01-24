@@ -1462,8 +1462,9 @@ uint8_t pc9801_state::get_slave_ack(offs_t offset)
    PC-9801RS needs X1 for the pit, otherwise Uchiyama Aki no Chou Bangai has sound pitch bugs
    PC-9821 definitely needs X2, otherwise there's a timer error at POST. Unless it needs a different clock anyway ...
    */
-#define MAIN_CLOCK_X1 1'996'800
-#define MAIN_CLOCK_X2 2'457'600
+#define BASE_CLOCK      XTAL(31'948'800)    // verified to be used by PC-98RS/98FA by wd40yasu
+#define MAIN_CLOCK_X1   (BASE_CLOCK / 16)   // 1.9968 MHz
+#define MAIN_CLOCK_X2   (BASE_CLOCK / 13)   // 2.4576 MHz
 
 /****************************************
 *
@@ -2178,6 +2179,7 @@ void pc9801_state::pc9801_common(machine_config &config)
 	m_pit->out_handler<2>().append(m_sio, FUNC(i8251_device::write_rxc));
 
 	AM9517A(config, m_dmac, 5000000); // unknown clock, TODO: check channels 0 - 1
+	m_dmac->dreq_active_low();
 	m_dmac->out_hreq_callback().set(FUNC(pc9801_state::dma_hrq_changed));
 	m_dmac->out_eop_callback().set(FUNC(pc9801_state::tc_w));
 	m_dmac->in_memr_callback().set(FUNC(pc9801_state::dma_read_byte));
