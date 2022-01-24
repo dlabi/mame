@@ -92,7 +92,7 @@ static const pcb_type sw_pcbdefs[] =
 
 ti99_cartridge_device::ti99_cartridge_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
 :   device_t(mconfig, TI99_CART, tag, owner, clock),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	m_pcbtype(0),
 	m_slot(0),
 	m_pcb(nullptr),
@@ -257,7 +257,10 @@ image_init_result ti99_cartridge_device::call_load()
 	}
 	else
 	{
-		std::error_condition err = rpk_open(machine().options(), util::core_file_read(image_core_file()), machine().system().name, m_rpk);
+		util::core_file::ptr proxy;
+		std::error_condition err = util::core_file::open_proxy(image_core_file(), proxy);
+		if (!err)
+			err = rpk_open(machine().options(), std::move(proxy), machine().system().name, m_rpk);
 		if (err)
 		{
 			LOGMASKED(LOG_WARN, "Failed to load cartridge '%s': %s\n", basename(), err.message().c_str());

@@ -63,7 +63,7 @@ void device_vectrex_cart_interface::rom_alloc(uint32_t size, const char *tag)
 //-------------------------------------------------
 vectrex_cart_slot_device::vectrex_cart_slot_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock) :
 	device_t(mconfig, VECTREX_CART_SLOT, tag, owner, clock),
-	device_image_interface(mconfig, *this),
+	device_cartrom_image_interface(mconfig, *this),
 	device_single_card_slot_interface<device_vectrex_cart_interface>(mconfig, *this),
 	m_type(VECTREX_STD),
 	m_vec3d(VEC3D_NONE),
@@ -198,19 +198,21 @@ std::string vectrex_cart_slot_device::get_default_card_software(get_default_card
 {
 	if (hook.image_file())
 	{
-		const char *slot_string;
-		uint32_t size = hook.image_file()->size();
+		// FIXME: consider oversize files, check for errors, and check for read returning early
+		// it's also really wasteful to read the whole file here when only a small part of it is used for identification
+		std::uint64_t size;
+		hook.image_file()->length(size);
 		std::vector<uint8_t> rom(size);
+		std::size_t actual;
+		hook.image_file()->read(&rom[0], size, actual);
+
 		int type = VECTREX_STD;
-
-		hook.image_file()->read(&rom[0], size);
-
-		if (!memcmp(&rom[0x06], "SRAM", 4))
+		if (!memcmp(&rom[0x06], "SRAM", 4)) // FIXME: bounds check!
 			type = VECTREX_SRAM;
 		if (size > 0x8000)
 			type = VECTREX_64K;
 
-		slot_string = vectrex_get_slot(type);
+		char const *const slot_string = vectrex_get_slot(type);
 
 		//printf("type: %s\n", slot_string);
 

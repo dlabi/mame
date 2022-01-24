@@ -15,10 +15,12 @@
 
 #include "emu.h"
 #include "flopdrv.h"
+#include "softlist_dev.h"
 
 #include "formats/imageutl.h"
 
 #include "util/ioprocs.h"
+#include "util/ioprocsfilter.h"
 
 
 #define VERBOSE     0
@@ -426,7 +428,7 @@ image_init_result legacy_floppy_image_device::internal_floppy_device_load(bool i
 
 	floperr_t err;
 	check_for_file();
-	auto io = util::core_file_read_write(image_core_file(), 0xff);
+	auto io = util::random_read_write_fill(image_core_file(), 0xff);
 	if (!io)
 	{
 		err = FLOPPY_ERROR_OUTOFMEMORY;
@@ -716,6 +718,11 @@ void legacy_floppy_image_device::device_config_complete()
 			image_specify_extension(m_extension_list, 256, floppy_options[i].extensions);
 		}
 	}
+}
+
+const software_list_loader &legacy_floppy_image_device::get_software_list_loader() const
+{
+	return image_software_list_loader::instance();
 }
 
 image_init_result legacy_floppy_image_device::call_create(int format_type, util::option_resolution *format_options)

@@ -30,7 +30,7 @@
 #include "emu.h"
 #include "hp_dc100_tape.h"
 
-#include "util/ioprocs.h"
+#include "util/ioprocsfilter.h"
 
 // Debugging
 #include "logmacro.h"
@@ -78,8 +78,7 @@ constexpr double MOTION_MARGIN = 1e-5;  // Margin to ensure motion events have p
 constexpr hti_format_t::tape_pos_t TAPE_INIT_POS = 80 * hti_format_t::ONE_INCH_POS; // Initial tape position: 80" from beginning (just past the punched part)
 
 hp_dc100_tape_device::hp_dc100_tape_device(const machine_config &mconfig, const char *tag, device_t *owner, uint32_t clock)
-	: device_t(mconfig , HP_DC100_TAPE , tag , owner , clock)
-	, device_image_interface(mconfig , *this)
+	: microtape_image_device(mconfig , HP_DC100_TAPE , tag , owner , clock)
 	, m_cart_out_handler(*this)
 	, m_hole_handler(*this)
 	, m_tacho_tick_handler(*this)
@@ -110,7 +109,7 @@ void hp_dc100_tape_device::call_unload()
 
 	if (m_image_dirty) {
 		check_for_file();
-		auto io = util::core_file_read_write(image_core_file(), 0);
+		auto io = util::random_read_write_fill(image_core_file(), 0);
 		if (io) {
 			m_image.save_tape(*io);
 			m_image_dirty = false;
@@ -606,7 +605,7 @@ image_init_result hp_dc100_tape_device::internal_load(bool is_create)
 
 	check_for_file();
 	if (is_create) {
-		auto io = util::core_file_read_write(image_core_file(), 0);
+		auto io = util::random_read_write_fill(image_core_file(), 0);
 		if (!io) {
 			LOG("out of memory\n");
 			seterror(std::errc::not_enough_memory, nullptr);
@@ -616,7 +615,7 @@ image_init_result hp_dc100_tape_device::internal_load(bool is_create)
 		m_image.clear_tape();
 		m_image.save_tape(*io);
 	} else {
-		auto io = util::core_file_read(image_core_file(), 0);
+		auto io = util::random_read_fill(image_core_file(), 0);
 		if (!io) {
 			LOG("out of memory\n");
 			seterror(std::errc::not_enough_memory, nullptr);

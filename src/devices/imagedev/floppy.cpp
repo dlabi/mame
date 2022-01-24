@@ -24,12 +24,13 @@
 #include "formats/fs_unformatted.h"
 #include "formats/fsblk_vec.h"
 
-#include "screen.h"
+#include "softlist_dev.h"
 #include "speaker.h"
 
 #include "formats/imageutl.h"
 
 #include "util/ioprocs.h"
+#include "util/ioprocsfilter.h"
 #include "util/zippath.h"
 
 /*
@@ -154,7 +155,7 @@ format_registration::format_registration()
 	add(FLOPPY_MFI_FORMAT); // Our generic format
 	add(FLOPPY_DFI_FORMAT); // Flux format, dying
 
-	add(FS_UNFORMATTED);
+	add(fs::UNFORMATTED);
 }
 
 void format_registration::add_fm_containers()
@@ -187,7 +188,7 @@ void format_registration::add(floppy_format_type format)
 	m_formats.push_back(format);
 }
 
-void format_registration::add(const filesystem_manager_t &fs)
+void format_registration::add(const fs::manager_t &fs)
 {
 	m_fs.push_back(&fs);
 }
@@ -351,7 +352,7 @@ void floppy_image_device::register_formats()
 	}
 
 	fs_enum fse(this);
-	for(const filesystem_manager_t *fmt : fr.m_fs)
+	for(const fs::manager_t *fmt : fr.m_fs)
 	{
 		fse.m_manager = fmt;
 		fmt->enumerate_f(fse, form_factor, variants);
@@ -403,7 +404,7 @@ void floppy_image_device::commit_image()
 		return;
 
 	check_for_file();
-	auto io = util::core_file_read_write(image_core_file(), 0xff);
+	auto io = util::random_read_write_fill(image_core_file(), 0xff);
 	if(!io) {
 		popmessage("Error, out of memory");
 		return;
@@ -425,6 +426,11 @@ void floppy_image_device::device_config_complete()
 
 	setup_characteristics();
 	register_formats();
+}
+
+const software_list_loader &floppy_image_device::get_software_list_loader() const
+{
+	return image_software_list_loader::instance();
 }
 
 
@@ -543,7 +549,7 @@ floppy_image_format_t *floppy_image_device::identify(std::string filename)
 		return nullptr;
 	}
 
-	auto io = util::core_file_read(std::move(fd), 0xff);
+	auto io = util::random_read_fill(std::move(fd), 0xff);
 	if(!io) {
 		seterror(std::errc::not_enough_memory, nullptr);
 		return nullptr;
@@ -591,7 +597,7 @@ void floppy_image_device::init_floppy_load(bool write_supported)
 image_init_result floppy_image_device::call_load()
 {
 	check_for_file();
-	auto io = util::core_file_read(image_core_file(), 0xff);
+	auto io = util::random_read_fill(image_core_file(), 0xff);
 	if(!io) {
 		seterror(std::errc::not_enough_memory, nullptr);
 		return image_init_result::FAIL;
@@ -828,12 +834,12 @@ image_init_result floppy_image_device::call_create(int format_type, util::option
 	return image_init_result::PASS;
 }
 
-void floppy_image_device::init_fs(const fs_info *fs, const fs_meta_data &meta)
+void floppy_image_device::init_fs(const fs_info *fs, const fs::meta_data &meta)
 {
 	assert(image);
 	if (fs->m_type) {
 		std::vector<u8> img(fs->m_image_size);
-		fsblk_vec_t blockdev(img);
+		fs::fsblk_vec_t blockdev(img);
 		auto cfs = fs->m_manager->mount(blockdev);
 		cfs->format(meta);
 
@@ -842,7 +848,7 @@ void floppy_image_device::init_fs(const fs_info *fs, const fs_meta_data &meta)
 		source_format->load(*io, floppy_image::FF_UNKNOWN, variants, image.get());
 		delete source_format;
 	} else {
-		fs_unformatted::format(fs->m_key, image.get());
+		fs::unformatted_image::format(fs->m_key, image.get());
 	}
 }
 

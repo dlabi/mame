@@ -2,7 +2,9 @@
 // copyright-holders:David Haywood, Luca Elia, MetalliC
 /*
 
-U2 flash rom note
+Cave CV1000 hardware
+
+U2 flash rom note:
 
 Cave often programmed the u2 roms onto defective flash chips, programming around the bad blocks.
 As a result these are highly susceptible to failure, blocks around the known bad blocks appear to
@@ -14,32 +16,38 @@ The flash roms do contain a 'bad block' table, so it should be possible to rebui
 flash ROM for each game by comparing multiple dumps of each game and ensuring no other data has
 decayed.  Naturally this is not an ideal situation for the less common games!
 
-----
-
-Cave CV1000 hardware
+--------------------------------------------------------------------------------
 
 Games by Cave ID number:
+ID is labeled on U13 chip, not always
+Serial is on a sticker on PCB, eg. "CAVE DS-10104"
 
-CA011  Mushihime-Sama
-CA012  Ibara
-CA012B Ibara Kuro Black Label
-CA013  Espgaluda II
-CA014  Pink Sweets: Ibara Sorekara
-CA015  Mushihime-Sama Futari
-CA015B Mushihime-Sama Futari Black Label
-CA016  Muchi Muchi Pork!
-CA017  Deathsmiles
-CA017B Deathsmiles Black Label
-CA019  Do-Don-Pachi Dai-Fukkatsu
-CA019B Do-Don-Pachi Dai-Fukkatsu Black Label
-CA021  Akai Katana
+ID     Serial   PCB  Title
+-------------------------------------
+CA011  -        B    Mushihime-Sama
+CA???  MHN      B    Mushihime-Sama Cave Matsuri 1.5
+CA012  -        B    Ibara
+CA012B IB       B    Ibara Kuro Black Label
+CA013  E        B    Espgaluda II
+CA???  M        B    Puzzle! Mushihime-Tama
+CA014  CA       B    Pink Sweets: Ibara Sorekara
+CA015  CA       B    Mushihime-Sama Futari
+CA015B MFBA/MMB B    Mushihime-Sama Futari Black Label
+CA016  MP       B    Muchi Muchi Pork!
+CA017  DS       B    Deathsmiles
+CA017B DSB      D    Deathsmiles Black Label
+CA019  DD       D    DoDonPachi DaiFukkatsu
+CA019B DDB      D    DoDonPachi DaiFukkatsu Black Label
+CA021  AK       D    Akai Katana
+CA???  SDO      D    DoDonPachi SaiDaiOuJou
 
-CMDL01 Medal Mahjong Moukari Bancho
-?????? Pirates of Gappori: http://web.archive.org/web/20090907145501/http://www.cave.co.jp/gameonline/gappori/
-?????? Uhauha Ooku: http://web.archive.org/web/20141104001322/http://www.cave.co.jp/gameonline/oooku/
+CMDL01 - Medal Mahjong Moukari Bancho
+?????? - Pirates of Gappori: http://web.archive.org/web/20090907145501/http://www.cave.co.jp/gameonline/gappori/
+?????? - Uhauha Ooku: http://web.archive.org/web/20141104001322/http://www.cave.co.jp/gameonline/oooku/
 
 Note: CA018 - Deathsmiles II: Makai no Merry Christmas on unknown custom platform
-      CA020 - Do-Don-Pachi Dai-ou-jou Tamashii on PGM2 platform
+      CA020 - DoDonPachi DaiOuJou Tamashii on PGM2 platform
+
 
 PCB CV1000-B / CV1000-D
 +--------------------------------------------+
@@ -131,8 +139,8 @@ Misc:
 
 Note: * The Altera EPM7032 usually stamped / labeled with the Cave game ID number as listed above.
       * Actual flash ROMs will vary by manufacturer but will be compatible with flash ROM listed.
-      * There are two known CV1000-B PCB revisions. The newer one uses an updated FPGA firmware
-        and has some minor hardware differences.
+      * There are two known CV1000-B PCB revisions. The newer one has some minor hardware differences
+        and uses an updated FPGA firmware, they are not compatible with eachother.
       * The CV1000-D revision PCB has double the RAM at U1, double the ROM at U4 and no battery.
         The CV1000-D is used for Dodonpachi Daifukkatsu and later games. Commonly referred to as SH3B PCB.
 
@@ -140,11 +148,15 @@ Information by The Sheep, rtw, Ex-Cyber, BrianT & Guru
 
 ------------------------------------------------------
 
- To enter service mode in most cases hold down Service (F2) for a few seconds
-  (I believe it's the test button on the PCB)
- Some games also use the test dipswitch as an alternative method.
+To enter service mode in most cases hold down Service (F2) for a few seconds
+ (I believe it's the test button on the PCB)
+Some games also use the test dipswitch as an alternative method.
 
-ToDo:
+Common game codes:
+ - During boot hold P1 Right+A+B+C and P2 Left+A+B+C - Forcibly initialise non-volatile data (EEPROM or NAND settings area)
+ - During boot hold P1 A and P2 A - Reset random numbers generator at each game start. Probably was used during testing or/and competition events.
+
+TODO:
 
 Improve Blending precision?
  - I'm not sure what precision the original HW mixes with, source data is 555 RGB with 1 bit transparency (16-bits)
@@ -166,9 +178,10 @@ Blitter Timing
  - Correct slowdown emulation and flags (depends on blit mode, and speed of RAM) - could do with the recompiler or alt idle skips on the busy flag wait loops
  - End of Blit IRQ? (one game has a valid irq routine that looks like it was used for profiling, but nothing depends on it)
 
-Common game codes:
- - During boot hold P1 Right+A+B+C and P2 Left+A+B+C - Forcibly initialise non-volatile data (EEPROM or NAND settings area)
- - During boot hold P1 A and P2 A - Reset random numbers generator at each game start. Probably was used during testing or/and competition events.
+31/12/2021:
+  Akai Katana and Dodonpachi Saidaioujou removed at the request of the
+  current rightholder, exA-Arcadia (legal@exa.ac).
+
 */
 
 #include "emu.h"
@@ -312,7 +325,6 @@ void cv1k_state::flash_io_w(offs_t offset, uint8_t data)
 }
 
 
-
 // ibarablk uses the rtc to render the clock in the first attract demo
 // if this code returns bad values it has gfx corruption.  the ibarablka set doesn't do this?!
 uint8_t cv1k_state::serial_rtc_eeprom_r(offs_t offset)
@@ -351,7 +363,7 @@ void cv1k_state::cv1k_map(address_map &map)
 	map(0x0c000000, 0x0c7fffff).ram().share("mainram");// work RAM
 	map(0x10000000, 0x10000007).rw(FUNC(cv1k_state::flash_io_r), FUNC(cv1k_state::flash_io_w));
 	map(0x10400000, 0x10400007).w("ymz770", FUNC(ymz770_device::write));
-	map(0x10C00000, 0x10C00007).rw(FUNC(cv1k_state::serial_rtc_eeprom_r), FUNC(cv1k_state::serial_rtc_eeprom_w));
+	map(0x10c00000, 0x10c00007).rw(FUNC(cv1k_state::serial_rtc_eeprom_r), FUNC(cv1k_state::serial_rtc_eeprom_w));
 //  map(0x18000000, 0x18000057) // blitter, installed on reset
 	map(0xf0000000, 0xf0ffffff).ram(); // mem mapped cache (sh3 internal?)
 }
@@ -362,7 +374,7 @@ void cv1k_state::cv1k_d_map(address_map &map)
 	map(0x0c000000, 0x0cffffff).ram().share("mainram"); // work RAM
 	map(0x10000000, 0x10000007).rw(FUNC(cv1k_state::flash_io_r), FUNC(cv1k_state::flash_io_w));
 	map(0x10400000, 0x10400007).w("ymz770", FUNC(ymz770_device::write));
-	map(0x10C00000, 0x10C00007).rw(FUNC(cv1k_state::serial_rtc_eeprom_r), FUNC(cv1k_state::serial_rtc_eeprom_w));
+	map(0x10c00000, 0x10c00007).rw(FUNC(cv1k_state::serial_rtc_eeprom_r), FUNC(cv1k_state::serial_rtc_eeprom_w));
 //  map(0x18000000, 0x18000057) // blitter, installed on reset
 	map(0xf0000000, 0xf0ffffff).ram(); // mem mapped cache (sh3 internal?)
 }
@@ -454,7 +466,7 @@ INPUT_PORTS_END
 void cv1k_state::machine_reset()
 {
 	m_blitter->set_rambase(reinterpret_cast<uint16_t *>(m_ram.target()));
-	m_blitter->set_is_unsafe(machine().root_device().ioport(":BLITCFG")->read());
+	m_blitter->set_is_unsafe(ioport("BLITCFG")->read());
 	m_blitter->install_handlers( 0x18000000, 0x18000057 );
 	m_blitter->reset();
 }
@@ -463,8 +475,8 @@ void cv1k_state::cv1k(machine_config &config)
 {
 	/* basic machine hardware */
 	SH3BE(config, m_maincpu, 12.8_MHz_XTAL*8); // 102.4MHz
-	m_maincpu->set_md(0, 0);  // none of this is verified
-	m_maincpu->set_md(1, 0);  // (the sh3 is different to the sh4 anyway, should be changed)
+	m_maincpu->set_md(0, 0); // none of this is verified
+	m_maincpu->set_md(1, 0); // (the sh3 is different to the sh4 anyway, should be changed)
 	m_maincpu->set_md(2, 0);
 	m_maincpu->set_md(3, 0);
 	m_maincpu->set_md(4, 0);
@@ -505,8 +517,8 @@ void cv1k_state::cv1k_d(machine_config &config)
 
 	/* basic machine hardware */
 	SH3BE(config.replace(), m_maincpu, 12.8_MHz_XTAL*8); // 102.4MHz
-	m_maincpu->set_md(0, 0);  // none of this is verified
-	m_maincpu->set_md(1, 0);  // (the sh3 is different to the sh4 anyway, should be changed)
+	m_maincpu->set_md(0, 0); // none of this is verified
+	m_maincpu->set_md(1, 0); // (the sh3 is different to the sh4 anyway, should be changed)
 	m_maincpu->set_md(2, 0);
 	m_maincpu->set_md(3, 0);
 	m_maincpu->set_md(4, 0);
@@ -886,17 +898,32 @@ ROM_START( dfkbl )
 	ROM_LOAD16_WORD_SWAP( "u24", 0x400000, 0x400000, CRC(31f9eb0a) SHA1(322158779e969bb321241065dd49c1167b91ff6c) )
 ROM_END
 
-ROM_START( akatana )
-	ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF)
-	ROM_LOAD16_WORD_SWAP( "u4", 0x000000, 0x400000, CRC(613fd380) SHA1(6e28480eef3b483d00b42d811a9d2c7fa1097924) ) // (2010/ 8/13 MASTER VER.)
+// ROM_START( akatana )
+//  ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF)
+//  ROM_LOAD16_WORD_SWAP( "u4", 0x000000, 0x400000, CRC(613fd380) SHA1(6e28480eef3b483d00b42d811a9d2c7fa1097924) ) // (2010/ 8/13 MASTER VER.)
 
-	ROM_REGION( 0x8400000, "game", ROMREGION_ERASEFF)
-	ROM_LOAD( "u2", 0x000000, 0x8400000, CRC(89a2e1a5) SHA1(e6f4ec974406283665697fdd52bd606d0337dd11) )
+//  ROM_REGION( 0x8400000, "game", ROMREGION_ERASEFF)
+//  ROM_LOAD( "u2", 0x000000, 0x8400000, CRC(89a2e1a5) SHA1(e6f4ec974406283665697fdd52bd606d0337dd11) )
 
-	ROM_REGION( 0x800000, "ymz770", ROMREGION_ERASEFF)
-	ROM_LOAD16_WORD_SWAP( "u23", 0x000000, 0x400000, CRC(34a67e24) SHA1(78a7e82123b86311f1116a80c39f147b8b695549) )
-	ROM_LOAD16_WORD_SWAP( "u24", 0x400000, 0x400000, CRC(10760fed) SHA1(b70f4506c00f3901ff38f5efd4b897af1afc7a0c) )
-ROM_END
+//  ROM_REGION( 0x800000, "ymz770", ROMREGION_ERASEFF)
+//  ROM_LOAD16_WORD_SWAP( "u23", 0x000000, 0x400000, CRC(34a67e24) SHA1(78a7e82123b86311f1116a80c39f147b8b695549) )
+//  ROM_LOAD16_WORD_SWAP( "u24", 0x400000, 0x400000, CRC(10760fed) SHA1(b70f4506c00f3901ff38f5efd4b897af1afc7a0c) )
+// ROM_END
+
+// ROM_START( ddpsdoj )
+//  ROM_REGION( 0x400000, "maincpu", ROMREGION_ERASEFF)
+//  ROM_LOAD16_WORD_SWAP("u4", 0x000000, 0x400000, CRC(e2a4411c) SHA1(f8b2b6326dd8eeae99b8b1ab2bd5a3f0b9c7f027) )
+//  ROM_IGNORE( 0x000100 ) // Flash extra bytes
+
+//  ROM_REGION( 0x8400000, "game", ROMREGION_ERASEFF)
+//  ROM_LOAD("u2", 0x000000, 0x8400000, CRC(668e4cd6) SHA1(da0b10865df3a3e46cf8a109ca88a551faba4483) )
+
+//  ROM_REGION( 0x800000, "ymz770", ROMREGION_ERASEFF)
+//  ROM_LOAD16_WORD_SWAP("u23", 0x000000, 0x400000, CRC(ac94801c) SHA1(cbcc6d5d89860bc961967e1d3b7c329adaf200c5) )
+//  ROM_IGNORE( 0x000100 ) // Flash extra bytes
+//  ROM_LOAD16_WORD_SWAP("u24", 0x400000, 0x400000, CRC(f593045b) SHA1(91b92870d0dd2a7817cb0059cc750e2393686f4c) )
+//  ROM_IGNORE( 0x000100 ) // Flash extra bytes
+// ROM_END
 
 uint64_t cv1k_state::speedup_r()
 {
@@ -1019,7 +1046,10 @@ GAME( 2008, ddpdfk10,   ddpdfk,   cv1k_d, cv1k, cv1k_state, init_ddpdfk,   ROT27
 GAME( 2010, dfkbl,      0,        cv1k_d, cv1k, cv1k_state, init_ddpdfk,   ROT270, "Cave",               "DoDonPachi Dai-Fukkatsu Black Label (2010/1/18 BLACK LABEL)",     MACHINE_IMPERFECT_TIMING )
 
 // CA021  Akai Katana
-GAME( 2010, akatana,    0,        cv1k_d, cv1k, cv1k_state, init_ddpdfk,   ROT0,   "Cave",               "Akai Katana (2010/ 8/13 MASTER VER.)",                            MACHINE_IMPERFECT_TIMING )
+//GAME( 2010, akatana,    0,        cv1k_d, cv1k, cv1k_state, init_ddpdfk,   ROT0,   "Cave",               "Akai Katana (2010/ 8/13 MASTER VER.)",                            MACHINE_IMPERFECT_TIMING )
+
+// CA??? DoDonPachi SaiDaiOuJou
+//GAME( 2012, ddpsdoj,    0,        cv1k_d, cv1k, cv1k_state, init_ddpdfk,   ROT270, "Cave",               "DoDonPachi SaiDaiOuJou (2012/ 4/20)",                             MACHINE_IMPERFECT_TIMING )
 
 // CMDL01 Medal Mahjong Moukari Bancho
 GAME( 2007, mmmbanc,    0,        cv1k,   cv1k, cv1k_state, init_pinkswts, ROT0,   "Cave (AMI license)", "Medal Mahjong Moukari Bancho (2007/06/05 MASTER VER.)",           MACHINE_NOT_WORKING )
