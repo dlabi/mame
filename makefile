@@ -424,7 +424,7 @@ endif
 endif # BIGENDIAN
 
 ifndef PYTHON_EXECUTABLE
-PYTHON := python3
+PYTHON := python
 else
 PYTHON := $(PYTHON_EXECUTABLE)
 endif

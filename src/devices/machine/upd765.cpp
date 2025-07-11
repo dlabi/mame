@@ -20,8 +20,8 @@
 #define LOG_LIVE    (1U << 12)  // Live states
 #define LOG_DONE    (1U << 13)  // Command done
 
-#define VERBOSE (LOG_GENERAL | LOG_WARN)
-
+#define VERBOSE (1 | LOG_GENERAL | LOG_WARN | LOG_STATE | LOG_RW | LOG_COMMAND | LOG_FORMAT | LOG_DONE)
+//#define VERBOSE (0xffff) 
 #include "logmacro.h"
 
 #include <iomanip>
@@ -2590,8 +2590,8 @@ TIMER_CALLBACK_MEMBER(upd765_family_device::run_drive_ready_polling)
 
 void upd765_family_device::index_callback(floppy_image_device *floppy, int state)
 {
-	LOGSTATE("Index pulse %d\n", state);
-	LOGLIVE("%s: Pulse %d\n", ttsn(), state);
+	//LOGSTATE("Index pulse %d\n", state);
+	//LOGLIVE("%s: Pulse %d\n", ttsn(), state);
 	for(floppy_info & fi : flopi) {
 		if(fi.dev != floppy)
 			continue;

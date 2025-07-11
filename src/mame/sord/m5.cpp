@@ -4,13 +4,7 @@
 
     Sord m.5
 
-    http://www.retropc.net/mm/m5/
-    http://www.museo8bits.es/wiki/index.php/Sord_M5 not working
-    http://k5.web.klfree.net/content/view/10/11/ not working
-    http://k5.web.klfree.net/images/stories/sord/m5heap.htm  not working
-    http://k5.klfree.net/index.php?option=com_content&task=view&id=5&Itemid=3
-    http://k5.klfree.net/index.php?option=com_content&task=view&id=10&Itemid=11
-    http://k5.klfree.net/index.php?option=com_content&task=view&id=14&Itemid=3
+	http://m5.arigato.cz/en_index.html
     http://www.dlabi.cz/?s=sord
     https://www.facebook.com/groups/59667560188/
     http://www.oldcomp.cz/viewtopic.php?f=103&t=1164
@@ -21,7 +15,7 @@
 
 TODO:
 
-    - fd5 floppy
+    - replace fd5 rom hack with proper emulation 
     - SI-5 serial interface (8251, ROM)
     - ramdisk for KRX Memory expansion
     - rewrite fd5 floppy as unpluggable device
@@ -36,6 +30,10 @@ TODO:
 
 
 CHANGELOG:
+
+08.07.2025
+	- fd5 floppy emulation works
+	- reenabled brno mod
 
 10.02.2016
     - fixed bug: crash if rom card was only cart
@@ -300,6 +298,10 @@ Few other notes:
 #include "formats/m5_dsk.h"
 #include "formats/sord_cas.h"
 
+#define VERBOSE 1
+#include "logmacro.h"
+
+#define MOTOR_TIMEOUT 3
 
 namespace {
 
@@ -313,7 +315,8 @@ public:
 		, m_fd5cpu(*this, "z80fd5")
 		, m_ppi(*this, "ppi")
 		, m_fdc(*this, "upd765")
-		, m_floppy0(*this, "upd765:0:525dd")
+		//, m_floppy0(*this, "upd765:0:525dd")
+		, m_floppy0(*this, "upd765:0:3dsdd")
 		, m_cassette(*this, "cassette")
 		, m_cart1(*this, "cartslot1")
 		, m_cart2(*this, "cartslot2")
@@ -321,6 +324,7 @@ public:
 		, m_ram(*this, RAM_TAG)
 		, m_reset(*this, "RESET")
 		, m_DIPS(*this, "DIPS")
+		, m_motor_timer(nullptr)
 	{ }
 
 	void m5(machine_config &config);
@@ -343,6 +347,7 @@ protected:
 	required_ioport m_reset;
 	optional_ioport m_DIPS;
 
+
 	m5_cart_slot_device *m_cart_ram = nullptr;
 	m5_cart_slot_device *m_cart = nullptr;
 
@@ -354,12 +359,15 @@ protected:
 	virtual void machine_start() override ATTR_COLD;
 	virtual void machine_reset() override ATTR_COLD;
 
+	TIMER_CALLBACK_MEMBER(motor_timeout_cb);
+	emu_timer *m_motor_timer;
+
 private:
 	u8 ppi_pa_r();
 	void ppi_pa_w(u8 data);
 	void ppi_pb_w(u8 data);
 	u8 ppi_pc_r();
-	void ppi_pc_w(u8 data);
+	//void ppi_pc_w(u8 data);
 
 	u8 fd5_data_r();
 	void fd5_data_w(u8 data);
@@ -367,6 +375,8 @@ private:
 	void fd5_com_w(u8 data);
 	void fd5_ctrl_w(u8 data);
 	void fd5_tc_w(u8 data);
+	void m_fdc_int_w(u8 data);
+
 
 	static void floppy_formats(format_registration &fr);
 
@@ -383,7 +393,6 @@ private:
 	void m5_io(address_map &map) ATTR_COLD;
 	void m5_mem(address_map &map) ATTR_COLD;
 
-private:
 	u8 m_ram_mode = 0;
 	u8 m_ram_type = 0;
 	memory_region *m_cart_rom = nullptr;
@@ -391,9 +400,9 @@ private:
 	// floppy state for fd5
 	u8 m_fd5_data = 0;
 	u8 m_fd5_com = 0;
-	int m_intra = 0;
-	int m_ibfa = 0;
-	int m_obfa = 0;
+	//int m_intr = 0;
+	//bool m_ibf = 0;
+	//bool m_obf = 0;
 };
 
 
@@ -519,119 +528,6 @@ void m5_state::com_w(u8 data)
 }
 
 
-
-//**************************************************************************
-//  FD-5
-//**************************************************************************
-
-//-------------------------------------------------
-//  fd5_data_r -
-//-------------------------------------------------
-
-u8 m5_state::fd5_data_r()
-{
-	m_ppi->pc6_w(0);
-
-	return m_fd5_data;
-}
-
-
-//-------------------------------------------------
-//  fd5_data_w -
-//-------------------------------------------------
-
-void m5_state::fd5_data_w(u8 data)
-{
-	m_fd5_data = data;
-
-	m_ppi->pc4_w(0);
-}
-
-
-//-------------------------------------------------
-//  fd5_com_r -
-//-------------------------------------------------
-
-u8 m5_state::fd5_com_r()
-{
-	/*
-
-	    bit     description
-
-	    0       ?
-	    1       1?
-	    2       IBFA?
-	    3       OBFA?
-	    4
-	    5
-	    6
-	    7
-
-	*/
-
-	return m_obfa << 3 | m_ibfa << 2 | 0x02;
-}
-
-
-//-------------------------------------------------
-//  fd5_com_w -
-//-------------------------------------------------
-
-void m5_state::fd5_com_w(u8 data)
-{
-	/*
-
-	    bit     description
-
-	    0       PPI PC2
-	    1       PPI PC0
-	    2       PPI PC1
-	    3
-	    4
-	    5
-	    6
-	    7
-
-	*/
-
-	m_fd5_com = data;
-}
-
-
-//-------------------------------------------------
-//  fd5_com_w -
-//-------------------------------------------------
-
-void m5_state::fd5_ctrl_w(u8 data)
-{
-	/*
-
-	    bit     description
-
-	    0
-	    1
-	    2
-	    3
-	    4
-	    5
-	    6
-	    7
-
-	*/
-
-	m_floppy0->mon_w(!BIT(data, 0));
-}
-
-
-//-------------------------------------------------
-//  fd5_com_w -
-//-------------------------------------------------
-
-void m5_state::fd5_tc_w(u8 data)
-{
-	m_fdc->tc_w(true);
-	m_fdc->tc_w(false);
-}
 
 //**************************************************************************
 //  64KBI support for oldest memory module
@@ -1030,36 +926,10 @@ INPUT_PORTS_END
 //  I8255 Interface
 //-------------------------------------------------
 
+// 0x70
 u8 m5_state::ppi_pa_r()
 {
 	return m_fd5_data;
-}
-
-u8 m5_state::ppi_pc_r()
-{
-	/*
-
-	    bit     description
-
-	    0       ?
-	    1       ?
-	    2       ?
-	    3
-	    4       STBA
-	    5
-	    6       ACKA
-	    7
-
-	*/
-
-	return (
-			/* FD5 bit 0-> M5 bit 2 */
-			((m_fd5_com & 0x01)<<2) |
-			/* FD5 bit 2-> M5 bit 1 */
-			((m_fd5_com & 0x04)>>1) |
-			/* FD5 bit 1-> M5 bit 0 */
-			((m_fd5_com & 0x02)>>1)
-	);
 }
 
 void m5_state::ppi_pa_w(u8 data)
@@ -1067,51 +937,202 @@ void m5_state::ppi_pa_w(u8 data)
 	m_fd5_data = data;
 }
 
+// 0x71
 void m5_state::ppi_pb_w(u8 data)
 {
 	/*
 
 	    bit     description
 
-	    0
-	    1
-	    2
-	    3
+		0 	AD0 \
+		1	AD1	 > only zeroes will work here, as the FD5 expects
+	    2	AD2 /
+		3	PIO/Peripherial SWITCH 1 = DEFAULT, 0 = INTELIGENT Interface
 	    4
 	    5
-	    6
-	    7
+	    6	/NMI
+	    7   /RTY
 
 	*/
 
 	if (data == 0xf0)
 	{
-		m_fd5cpu->set_input_line(INPUT_LINE_RESET, ASSERT_LINE);
-		m_fd5cpu->set_input_line(INPUT_LINE_RESET, CLEAR_LINE);
+		LOG("%04X: Out (71h), %02X. Resetting FD5 CPU\n", m_maincpu->pc() - 2, data);
+		m_fd5cpu->set_input_line(INPUT_LINE_NMI, ASSERT_LINE);
+		m_fd5cpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
 	}
 }
 
-void m5_state::ppi_pc_w(u8 data)
+// 0x72
+u8 m5_state::ppi_pc_r()
 {
 	/*
 
 	    bit     description
 
-	    0
-	    1
-	    2
-	    3       INTRA
-	    4
-	    5       IBFA
-	    6
-	    7       OBFA
+	    0       CMD/STATUS
+	    1       DTO
+	    2       /RFD
+	    3		?
+	    4       STB
+	    5		IBF
+	    6       /ACK
+	    7		/OBF
 
 	*/
 
-	m_intra = BIT(data, 3);
-	m_ibfa = BIT(data, 5);
-	m_obfa = BIT(data, 7);
+	u8 out = (
+		/* FD5 bit 0-> M5 bit 2 */
+		((m_fd5_com & 0x01) << 2) |
+		/* FD5 bit 2-> M5 bit 1 */
+		((m_fd5_com & 0x04) >> 1) |
+		/* FD5 bit 1-> M5 bit 0 */
+		((m_fd5_com & 0x02) >> 1) 
+		);
+	return out;
 }
+
+
+/*
+void m5_state::ppi_pc_w(u8 data)
+{
+
+
+	//m_intra = BIT(data, 3);
+	//m_ibfa = BIT(data, 5);
+	//m_obfa = BIT(data, 7);
+	data = data;
+}
+*/
+
+void m5_state::m_fdc_int_w(u8 data)
+{
+	m_fd5cpu->set_input_line(INPUT_LINE_IRQ0, !BIT(data,0));
+}
+
+//**************************************************************************
+//  FD-5
+//**************************************************************************
+
+//-------------------------------------------------
+//  fd5_data_r - 0x10
+//-------------------------------------------------
+
+u8 m5_state::fd5_data_r()
+{
+	m_ppi->pc6_w(0); //ACK
+	return m_fd5_data;
+}
+
+
+//-------------------------------------------------
+//  fd5_data_w - 0x10
+//-------------------------------------------------
+
+void m5_state::fd5_data_w(u8 data)
+{
+	m_fd5_data = data;
+	m_ppi->pc4_w(0); //STB
+}
+
+
+//-------------------------------------------------
+//  fd5_com_r - 0x30
+//-------------------------------------------------
+
+u8 m5_state::fd5_com_r()
+{
+	/*
+
+		bit     description
+
+		0       DEVICE NUMBER, needs to be 0 and this is only if PB0-PB3=0
+		1       /RTY Sequence reset, needs to be 1
+		2       IBF
+		3       OBF
+		4
+		5
+		6
+		7
+
+	*/
+
+	uint8_t pc = m_ppi->read(2);     // Read Port C (index 2)
+	bool obf = BIT(pc, 7);
+	bool ibf = BIT(pc, 5);
+	//uint8_t pb = m_ppi->pb_r();
+	//uint8_t address = BIT(pb, 0) & BIT(pb, 1) & BIT(pb, 2) & BIT(pb, 3);
+	//bool RTY = BIT(pb, 7);
+
+	uint8_t out = obf << 3 | ibf << 2 | 0x02; // device number 0 and RTY is harcoded here
+	//LOG("IN A,(30) -> %02X\n", out);
+	return out;
+}
+
+
+//-------------------------------------------------
+//  fd5_com_w - 0x20
+//-------------------------------------------------
+
+void m5_state::fd5_com_w(u8 data)
+{
+	/*
+
+		bit     description
+
+		0       PPI PC2/RFD
+		1       PPI PC0/CMD
+		2       PPI PC1/DTO
+		3		PPI PC4/STB
+		4		PPI PC5/ACK
+		5
+		6
+		7
+
+	*/
+	//LOG("%04x: Out (20h),%02x\n", m_fd5cpu->pc() - 2, data);
+	m_fd5_com = data;
+}
+
+
+//-------------------------------------------------
+//  fd5_ctrl_w - 0x40
+//-------------------------------------------------
+
+void m5_state::fd5_ctrl_w(u8 data)
+{
+	//data aren't used at all. Writing to this port just prolongs time when motor is running
+
+	bool state = m_floppy0->mon_r();
+
+	//spin up motor only if it isn't spinning already
+	if (state) {
+		LOG("FD5 Motor ON\n");
+		m_floppy0->mon_w(0); //motor on
+	}
+	//add more time before switching off
+	m_motor_timer->adjust(attotime::from_seconds(MOTOR_TIMEOUT));
+}
+
+
+
+TIMER_CALLBACK_MEMBER(m5_state::motor_timeout_cb)
+{
+	LOG("FD5 Motor OFF\n");
+	m_floppy0->mon_w(1); //timeout -> turn motor off
+}
+
+//-------------------------------------------------
+//  fd5_com_w - 0x50
+//-------------------------------------------------
+
+void m5_state::fd5_tc_w(u8 data)
+{
+	LOG("TC Pulse\n");
+	m_fdc->tc_w(true);
+	m_fdc->tc_w(false);
+}
+
 
 //-------------------------------------------------
 //  upd765_interface fdc_intf
@@ -1120,12 +1141,13 @@ void m5_state::ppi_pc_w(u8 data)
 void m5_state::floppy_formats(format_registration &fr)
 {
 	fr.add_mfm_containers();
-	fr.add(FLOPPY_M5_FORMAT);
+	//fr.add(FLOPPY_M5_FORMAT);
 }
 
 static void m5_floppies(device_slot_interface &device)
 {
-	device.option_add("525dd", FLOPPY_525_DD);
+	//device.option_add("525dd", FLOPPY_525_DD);
+	device.option_add("3dsdd", FLOPPY_3_DSDD);
 }
 
 static void m5_cart(device_slot_interface &device)
@@ -1309,16 +1331,18 @@ void m5_state::machine_start()
 	// register for state saving
 	save_item(NAME(m_fd5_data));
 	save_item(NAME(m_fd5_com));
-	save_item(NAME(m_intra));
-	save_item(NAME(m_ibfa));
-	save_item(NAME(m_obfa));
+	//save_item(NAME(m_intra));
+	//save_item(NAME(m_ibf));
+	//save_item(NAME(m_obf));
 	save_item(NAME(m_centronics_busy));
+	m_motor_timer = timer_alloc(FUNC(m5_state::motor_timeout_cb), this); //SED9420 trigger-in emulate
 }
 
 void m5_state::machine_reset()
 {
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
+
 
 	//is ram/rom cart plugged in?
 	if (m_cart1->exists())
@@ -1425,6 +1449,7 @@ void m5_state::machine_reset()
 			program.unmap_write(0x0000, 0x1fff);
 			program.install_read_handler(0x2000, 0x6fff, read8sm_delegate(*m_cart, FUNC(m5_cart_slot_device::read_rom)));
 			program.unmap_write(0x2000, 0x6fff);
+			program.install_ram(0x8000, 0xffff, memregion("maincpu")->base() + 0x8000); // TODO: pak smazat
 		}
 	m_ram_mode=0;
 }
@@ -1523,11 +1548,13 @@ void m5_state::m5(machine_config &config)
 	m_ppi->out_pa_callback().set(FUNC(m5_state::ppi_pa_w));
 	m_ppi->out_pb_callback().set(FUNC(m5_state::ppi_pb_w));
 	m_ppi->in_pc_callback().set(FUNC(m5_state::ppi_pc_r));
-	m_ppi->out_pc_callback().set(FUNC(m5_state::ppi_pc_w));
+	//m_ppi->out_pc_callback().set(FUNC(m5_state::ppi_pc_w));
 
 	UPD765A(config, m_fdc, 16_MHz_XTAL / 4, true, true); // clocked by SED9420C
-	m_fdc->intrq_wr_callback().set_inputline(m_fd5cpu, INPUT_LINE_IRQ0);
-	FLOPPY_CONNECTOR(config, "upd765:0", m5_floppies, "525dd", m5_state::floppy_formats);
+	m_fdc->intrq_wr_callback().set_inputline(m_fd5cpu, INPUT_LINE_IRQ0); //.invert();
+	//m_fdc->intrq_wr_callback().set(FUNC(m5_state::m_fdc_int_w));
+	//FLOPPY_CONNECTOR(config, "upd765:0", m5_floppies, "525dd", m5_state::floppy_formats);
+	FLOPPY_CONNECTOR(config, "upd765:0", m5_floppies, "3dsdd", m5_state::floppy_formats);
 
 	// cartridge
 	M5_CART_SLOT(config, m_cart1, m5_cart, nullptr);
@@ -1658,6 +1685,20 @@ ROM_START( m5p )
 
 	ROM_REGION( 0x4000, "z80fd5", 0 )
 	ROM_LOAD( "sordfd5.rom", 0x0000, 0x4000, CRC(7263bbc5) SHA1(b729500d3d2b2e807d384d44b76ea5ad23996f4a))
+	//rom patch which fixes case where IRQ fireups sooner than polling rutine expects.
+	// don't know real reason why timings is so different but it seems IRQ of MAME upd765 device is faster than on real FD5.
+	//ROM_FILL(0x2038, 3, 0) short but not safe fix
+	// RST 18 rutine
+	ROM_FILL(0x18, 1, 0xf3)		//di added this to avoid premature IRQ
+	ROM_FILL(0x19, 1, 0xed)		// ld de,($c3df)
+	ROM_FILL(0x1a, 1, 0x5b)
+	ROM_FILL(0x1b, 1, 0xdf)
+	ROM_FILL(0x1c, 1, 0xc3)
+	ROM_FILL(0x1d, 1, 0xc9)		//ret
+	//patch to jump to rst 18
+	ROM_FILL(0x1fef, 1, 0xdf)	// replace ld de,($c3df) by rst 18h where above is set
+	ROM_FILL(0x1ff0, 3, 0)		// replace rest of ld instruction by nops
+
 ROM_END
 
 //-------------------------------------------------
