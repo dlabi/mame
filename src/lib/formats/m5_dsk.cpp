@@ -33,12 +33,17 @@ const char *m5_format::extensions() const noexcept
 const m5_format::format m5_format::formats[] = {
 	{
 		floppy_image::FF_525, floppy_image::DSDD, floppy_image::MFM,
-		2000, // 2us, 300rpm
-		18, 40, 2,
-		256, {},
-		1, {},
+		2000, // cell size, here 2us, 300rpm
+		18, 40, 2, //sectors per track, tracks, sides
+		256, {}, //bytes per sector, if 0 then within {}  list of allowed values
+		1, {}, //if -1 then within {} order
 		80, 50, 22, 80
 	},
+	{   //  320k 3 inch double density double sided
+		floppy_image::FF_3, floppy_image::DSDD, floppy_image::MFM,
+		2000, 16, 40, 2, 256, {}, 1, {}, 32, 22, 54
+	},
+
 	{}
 };
 
