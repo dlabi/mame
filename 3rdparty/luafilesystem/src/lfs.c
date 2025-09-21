@@ -51,6 +51,7 @@
 #include <windows.h>
 #include <io.h>
 #include <sys/locking.h>
+//#include <fcntl.h>
 
 #ifdef __BORLANDC__
 #include <utime.h>
@@ -86,6 +87,7 @@
 #include <lualib.h>
 
 #include "lfs.h"
+#include <corecrt_io.h>
 
 #define LFS_VERSION "1.8.0"
 #define LFS_LIBNAME "lfs"

@@ -1,0 +1,55 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <ItemGroup>
+    <ClCompile Include="src\auxiliar.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\buffer.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\compat.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\except.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\inet.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\io.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\luasocket.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\options.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\select.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\tcp.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\timeout.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\udp.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+    <ClCompile Include="src\wsocket.c">
+      <Filter>3rdparty\socket\src</Filter>
+    </ClCompile>
+  </ItemGroup>
+  <ItemGroup>
+    <Filter Include="3rdparty">
+      <UniqueIdentifier>{5fa98e11-ad48-4cf6-a0a8-164dbe529c95}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rdparty\socket">
+      <UniqueIdentifier>{b947cc36-ddea-4290-a65c-ae116d053b47}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="3rdparty\socket\src">
+      <UniqueIdentifier>{42f984c4-ee70-4856-9435-0c16f65d9187}</UniqueIdentifier>
+    </Filter>
+  </ItemGroup>
+</Project>
