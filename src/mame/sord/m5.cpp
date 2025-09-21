@@ -8,6 +8,10 @@
     http://www.dlabi.cz/?s=sord
     https://www.facebook.com/groups/59667560188/
     http://www.oldcomp.cz/viewtopic.php?f=103&t=1164
+	#fd-5
+	http://m5.arigato.cz/cs_fd5.html
+	https://dlabi.cz/data/imgs/schemata/PCB-schema-FD-5-A2-Zeravsky.png
+	https://dlabi.cz/data/imgs/schemata/PCB-schema-FD-5-A4half.png
 
 ****************************************************************************/
 
@@ -32,8 +36,9 @@ TODO:
 CHANGELOG:
 
 08.07.2025
-	- fd5 floppy emulation works
+	- fd5 floppy emulation works but only with rom hack
 	- reenabled brno mod
+	- updated Sord m5 www links
 
 10.02.2016
     - fixed bug: crash if rom card was only cart
@@ -301,7 +306,7 @@ Few other notes:
 #define VERBOSE 1
 #include "logmacro.h"
 
-#define MOTOR_TIMEOUT 3
+#define FDC_MOTOR_TIMEOUT 3
 
 namespace {
 
@@ -359,8 +364,10 @@ protected:
 	virtual void machine_start() override ATTR_COLD;
 	virtual void machine_reset() override ATTR_COLD;
 
-	TIMER_CALLBACK_MEMBER(motor_timeout_cb);
-	emu_timer *m_motor_timer;
+	TIMER_CALLBACK_MEMBER(FDC_MOTOR_TIMEOUT_cb);
+	TIMER_CALLBACK_MEMBER(fdc_irq_timer_cb);
+	emu_timer *m_motor_timer = nullptr;
+	emu_timer *m_fdc_irq_timer = nullptr;
 
 private:
 	u8 ppi_pa_r();
@@ -375,8 +382,7 @@ private:
 	void fd5_com_w(u8 data);
 	void fd5_ctrl_w(u8 data);
 	void fd5_tc_w(u8 data);
-	void m_fdc_int_w(u8 data);
-
+	 
 
 	static void floppy_formats(format_registration &fr);
 
@@ -542,7 +548,6 @@ void m5_state::mem64KBI_w(offs_t offset, u8 data) //out 0x6c
 {
 	if (m_ram_type != MEM64KBI) return;
 
-#if 0 // FIXME: disabled for now
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
@@ -572,7 +577,6 @@ void m5_state::mem64KBI_w(offs_t offset, u8 data) //out 0x6c
 		else
 			program.unmap_readwrite(0x2000, 0x3fff);
 	}
-#endif
 
 	logerror("64KBI: ROM %s", m_ram_mode == 0 ? "enabled\n" : "disabled\n");
 }
@@ -585,7 +589,6 @@ void m5_state::mem64KBF_w(u8 data) //out 0x30
 {
 	if (m_ram_type != MEM64KBF) return;
 
-#if 0 // FIXME: disabled for now
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str()); //ROM region of the cart
@@ -691,7 +694,6 @@ void m5_state::mem64KBF_w(u8 data) //out 0x30
 			membank("bank6r")->set_base(rom_region->base()+0xc000);     membank("bank6w")->set_base(rom_region->base()+0xc000);
 			break;
 	}
-#endif
 
 	logerror("64KBF RAM mode set to %d\n", m_ram_mode);
 }
@@ -705,7 +707,6 @@ void m5_state::mem64KRX_w(offs_t offset, u8 data) //out 0x7f
 	if (m_ram_type != MEM64KRX) return;
 	if (m_ram_mode == data) return;
 
-#if 0 // FIXME: disabled for now
 	address_space &program = m_maincpu->space(AS_PROGRAM);
 	std::string region_tag;
 	m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
@@ -734,7 +735,7 @@ void m5_state::mem64KRX_w(offs_t offset, u8 data) //out 0x7f
 		program.install_read_handler(0x2000, 0x6fff, read8sm_delegate(*m_cart, FUNC(m5_cart_slot_device::read_rom)));
 		program.unmap_write(0x2000, 0x6fff);
 	}
-#endif
+
 
 	logerror("64KRX RAM mode set to %02x\n", m_ram_mode);
 }
@@ -785,7 +786,7 @@ void m5_state::m5_io(address_map &map)
 	map(0x50, 0x50).mirror(0x0f).rw(FUNC(m5_state::sts_r), FUNC(m5_state::com_w));
 //  map(0x60, 0x63) SIO
 	map(0x6c, 0x6c).rw(FUNC(m5_state::mem64KBI_r), FUNC(m5_state::mem64KBI_w)); //EM-64/64KBI paging
-	map(0x70, 0x73) /*.mirror(0x0c) don't know if necessary mirror this*/ .rw(m_ppi, FUNC(i8255_device::read), FUNC(i8255_device::write));
+	map(0x70, 0x73).rw(m_ppi, FUNC(i8255_device::read), FUNC(i8255_device::write)); //PIO
 	map(0x7f, 0x7f).w(FUNC(m5_state::mem64KRX_w)); //64KRD/64KRX paging
 }
 
@@ -929,7 +930,7 @@ INPUT_PORTS_END
 // 0x70
 u8 m5_state::ppi_pa_r()
 {
-	return m_fd5_data;
+		return m_fd5_data;
 }
 
 void m5_state::ppi_pa_w(u8 data)
@@ -950,17 +951,22 @@ void m5_state::ppi_pb_w(u8 data)
 		3	PIO/Peripherial SWITCH 1 = DEFAULT, 0 = INTELIGENT Interface
 	    4
 	    5
-	    6	/NMI
-	    7   /RTY
+	    6	!NMI
+	    7   !RTY
 
 	*/
 
-	if (data == 0xf0)
+	if (!BIT(data, 6))
 	{
 		LOG("%04X: Out (71h), %02X. Resetting FD5 CPU\n", m_maincpu->pc() - 2, data);
-		m_fd5cpu->set_input_line(INPUT_LINE_NMI, ASSERT_LINE);
-		m_fd5cpu->set_input_line(INPUT_LINE_NMI, CLEAR_LINE);
 	}
+
+	m_fd5cpu->set_input_line(INPUT_LINE_NMI, !BIT(data,6));
+	
+	
+	
+
+	
 }
 
 // 0x72
@@ -972,43 +978,30 @@ u8 m5_state::ppi_pc_r()
 
 	    0       CMD/STATUS
 	    1       DTO
-	    2       /RFD
+	    2       !RFD
 	    3		?
 	    4       STB
 	    5		IBF
-	    6       /ACK
-	    7		/OBF
+	    6       !ACK
+	    7		!OBF
 
 	*/
 
 	u8 out = (
 		/* FD5 bit 0-> M5 bit 2 */
 		((m_fd5_com & 0x01) << 2) |
+		/* FD5 bit 1-> M5 bit 0 */
+		((m_fd5_com & 0x02) >> 1) |
 		/* FD5 bit 2-> M5 bit 1 */
 		((m_fd5_com & 0x04) >> 1) |
-		/* FD5 bit 1-> M5 bit 0 */
-		((m_fd5_com & 0x02) >> 1) 
+		/* FD5 bit 3-> M5 bit 4 */
+		((m_fd5_com & 0x08) << 1) |
+		/* FD5 bit 4-> M5 bit 6 */
+		((m_fd5_com & 0x10) << 2)
 		);
 	return out;
 }
 
-
-/*
-void m5_state::ppi_pc_w(u8 data)
-{
-
-
-	//m_intra = BIT(data, 3);
-	//m_ibfa = BIT(data, 5);
-	//m_obfa = BIT(data, 7);
-	data = data;
-}
-*/
-
-void m5_state::m_fdc_int_w(u8 data)
-{
-	m_fd5cpu->set_input_line(INPUT_LINE_IRQ0, !BIT(data,0));
-}
 
 //**************************************************************************
 //  FD-5
@@ -1021,6 +1014,7 @@ void m5_state::m_fdc_int_w(u8 data)
 u8 m5_state::fd5_data_r()
 {
 	m_ppi->pc6_w(0); //ACK
+	m_ppi->pc6_w(1); 
 	return m_fd5_data;
 }
 
@@ -1033,6 +1027,8 @@ void m5_state::fd5_data_w(u8 data)
 {
 	m_fd5_data = data;
 	m_ppi->pc4_w(0); //STB
+	m_ppi->pc4_w(1);
+	
 }
 
 
@@ -1049,7 +1045,7 @@ u8 m5_state::fd5_com_r()
 		0       DEVICE NUMBER, needs to be 0 and this is only if PB0-PB3=0
 		1       /RTY Sequence reset, needs to be 1
 		2       IBF
-		3       OBF
+		3       !OBF
 		4
 		5
 		6
@@ -1060,11 +1056,11 @@ u8 m5_state::fd5_com_r()
 	uint8_t pc = m_ppi->read(2);     // Read Port C (index 2)
 	bool obf = BIT(pc, 7);
 	bool ibf = BIT(pc, 5);
-	//uint8_t pb = m_ppi->pb_r();
-	//uint8_t address = BIT(pb, 0) & BIT(pb, 1) & BIT(pb, 2) & BIT(pb, 3);
-	//bool RTY = BIT(pb, 7);
+	uint8_t pb = m_ppi->pb_r();
+	bool DEV = BIT(pb, 0) | BIT(pb, 1) | BIT(pb, 2) | BIT(pb, 3);
+	uint8_t RTY = BIT(pb, 7) << 1;
 
-	uint8_t out = obf << 3 | ibf << 2 | 0x02; // device number 0 and RTY is harcoded here
+	uint8_t out = obf << 3 | ibf << 2 | RTY | DEV; // device number 0 and RTY is harcoded here
 	//LOG("IN A,(30) -> %02X\n", out);
 	return out;
 }
@@ -1091,6 +1087,7 @@ void m5_state::fd5_com_w(u8 data)
 
 	*/
 	//LOG("%04x: Out (20h),%02x\n", m_fd5cpu->pc() - 2, data);
+
 	m_fd5_com = data;
 }
 
@@ -1111,15 +1108,22 @@ void m5_state::fd5_ctrl_w(u8 data)
 		m_floppy0->mon_w(0); //motor on
 	}
 	//add more time before switching off
-	m_motor_timer->adjust(attotime::from_seconds(MOTOR_TIMEOUT));
+	m_motor_timer->adjust(attotime::from_seconds(FDC_MOTOR_TIMEOUT));
 }
 
 
 
-TIMER_CALLBACK_MEMBER(m5_state::motor_timeout_cb)
+TIMER_CALLBACK_MEMBER(m5_state::FDC_MOTOR_TIMEOUT_cb)
 {
 	LOG("FD5 Motor OFF\n");
 	m_floppy0->mon_w(1); //timeout -> turn motor off
+}
+
+TIMER_CALLBACK_MEMBER(m5_state::fdc_irq_timer_cb)
+{
+	if (m_fd5cpu)
+		LOG("FD5 CPU IRQ ASSERTED NOW\n");
+		m_fd5cpu->set_input_line(INPUT_LINE_IRQ0, ASSERT_LINE);
 }
 
 //-------------------------------------------------
@@ -1335,7 +1339,8 @@ void m5_state::machine_start()
 	//save_item(NAME(m_ibf));
 	//save_item(NAME(m_obf));
 	save_item(NAME(m_centronics_busy));
-	m_motor_timer = timer_alloc(FUNC(m5_state::motor_timeout_cb), this); //SED9420 trigger-in emulate
+	m_motor_timer = timer_alloc(FUNC(m5_state::FDC_MOTOR_TIMEOUT_cb), this); //SED9420 trigger-in emulate
+	m_fdc_irq_timer = timer_alloc(FUNC(m5_state::fdc_irq_timer_cb), this); //delay timer
 }
 
 void m5_state::machine_reset()
@@ -1377,7 +1382,7 @@ void m5_state::machine_reset()
 		m_ram_type=m_cart_ram->get_type();
 
 		m_cart_rom = memregion(region_tag.assign(m_cart_ram->tag()).append(M5SLOT_ROM_REGION_TAG).c_str());
-		//memory_region *ram_region = memregion(region_tag.assign(m_cart_ram->tag()).append(":ram").c_str());
+		memory_region *ram_region = memregion(region_tag.assign(m_cart_ram->tag()).append(":ram").c_str());
 
 		switch (m_ram_type)
 		{
@@ -1391,7 +1396,7 @@ void m5_state::machine_reset()
 					program.unmap_write(0x2000, 0x6fff);
 				}
 				break;
-#if 0 // FIXME: disabled for now
+
 			case MEM64KBI:
 				program.install_rom(0x0000, 0x1fff, memregion("maincpu")->base());
 				program.unmap_write(0x0000, 0x1fff);
@@ -1434,7 +1439,7 @@ void m5_state::machine_reset()
 					membank("bank6r")->set_base(m_cart_rom->base()+0x12000); membank("bank6w")->set_base(ram_region->base()+0xc000);
 				}
 				break;
-#endif
+
 			default:
 				program.unmap_readwrite(0x8000, 0xffff);
 		}
@@ -1548,11 +1553,31 @@ void m5_state::m5(machine_config &config)
 	m_ppi->out_pa_callback().set(FUNC(m5_state::ppi_pa_w));
 	m_ppi->out_pb_callback().set(FUNC(m5_state::ppi_pb_w));
 	m_ppi->in_pc_callback().set(FUNC(m5_state::ppi_pc_r));
-	//m_ppi->out_pc_callback().set(FUNC(m5_state::ppi_pc_w));
+
 
 	UPD765A(config, m_fdc, 16_MHz_XTAL / 4, true, true); // clocked by SED9420C
+
+#define HACK_PATCH 1
+
+#ifdef HACK_PATCH
 	m_fdc->intrq_wr_callback().set_inputline(m_fd5cpu, INPUT_LINE_IRQ0); //.invert();
-	//m_fdc->intrq_wr_callback().set(FUNC(m5_state::m_fdc_int_w));
+
+#else:
+	m_fdc->intrq_wr_callback().set([this](int state) {
+		if (state) {
+			LOG("FD5 CPU: setting timer for IRQ\n");
+			m_fdc_irq_timer->adjust(attotime::from_usec(14));
+		}
+		else {
+			if (m_fd5cpu) {
+				LOG("FD5 CPU: clearing IRQ\n");
+				m_fd5cpu->set_input_line(INPUT_LINE_IRQ0, CLEAR_LINE);
+
+			}
+		}
+		});
+#endif
+
 	//FLOPPY_CONNECTOR(config, "upd765:0", m5_floppies, "525dd", m5_state::floppy_formats);
 	FLOPPY_CONNECTOR(config, "upd765:0", m5_floppies, "3dsdd", m5_state::floppy_formats);
 
@@ -1689,6 +1714,8 @@ ROM_START( m5p )
 	// don't know real reason why timings is so different but it seems IRQ of MAME upd765 device is faster than on real FD5.
 	//ROM_FILL(0x2038, 3, 0) short but not safe fix
 	// RST 18 rutine
+
+#ifdef HACK_PATCH
 	ROM_FILL(0x18, 1, 0xf3)		//di added this to avoid premature IRQ
 	ROM_FILL(0x19, 1, 0xed)		// ld de,($c3df)
 	ROM_FILL(0x1a, 1, 0x5b)
@@ -1698,6 +1725,7 @@ ROM_START( m5p )
 	//patch to jump to rst 18
 	ROM_FILL(0x1fef, 1, 0xdf)	// replace ld de,($c3df) by rst 18h where above is set
 	ROM_FILL(0x1ff0, 3, 0)		// replace rest of ld instruction by nops
+#endif
 
 ROM_END
 
