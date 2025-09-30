@@ -36,8 +36,8 @@ const m5_format::format m5_format::formats[] = {
 		2000, // cell size, here 2us, 300rpm
 		18, 40, 2, //sectors per track, tracks, sides
 		256, {}, //bytes per sector, if 0 then within {}  list of allowed values
-		1, {}, //if -1 then within {} order
-		80, 50, 22, 80
+		1, {}, //sector base id usually 0 or 1. -1 means interleave specified within {}
+		80, 50, 22, 80 //gap4a, gap1, gap2, gap3
 	},
 	{   //  320k 3 inch double density double sided
 		floppy_image::FF_3, floppy_image::DSDD, floppy_image::MFM,
