@@ -64,8 +64,19 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
+
+    # diagnostic step: prints MSYSTEM and other env info to help troubleshoot
+    - name: MSYS2 environment diagnostics
+      run: |
+        echo "MSYSTEM='$MSYSTEM'"
+        uname -a
+        echo "PATH=$PATH"
+        which ${matrix.cc} || true
+        which make || true
+        env | sort
     - name: Build
       env:
+        MSYSTEM: MINGW64            # force the MSYS environment the Makefile expects
         OVERRIDE_AR: "llvm-ar"
         OVERRIDE_CC: ${{ matrix.cc }}
         OVERRIDE_CXX: ${{ matrix.cxx }}
