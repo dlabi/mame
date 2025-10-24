@@ -25,7 +25,7 @@ jobs:
             slug: mingw-w64-x86_64
             cc: gcc
             cxx: g++
-            subtarget: mame
+            subtarget: m5
             executable: mame
           - compiler: clang-x64
             os: windows-latest
@@ -57,6 +57,8 @@ jobs:
         ARCHOPTS: "-fuse-ld=lld"
         SUBTARGET: ${{ matrix.subtarget }}
         TOOLS: 1
+        NOWERROR: 1
+        SOURCES: src/mame/sord/m5.cpp
       run: make -j3
     - name: Validate
       run: ./${{ matrix.executable }}.exe -validate
