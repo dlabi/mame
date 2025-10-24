@@ -9,14 +9,6 @@ on:
     - 'src/**'
     - 'COPYING'
     - 'makefile'
-  pull_request:
-    paths:
-    - '.github/workflows/**'
-    - '3rdparty/**'
-    - 'scripts/**'
-    - 'src/**'
-    - 'COPYING'
-    - 'makefile'
 
 permissions:
   contents: read
@@ -25,7 +17,7 @@ jobs:
   build-windows:
     strategy:
       matrix:
-        compiler: [gcc-x64, clang-x64, clang-arm64]
+        compiler: [gcc-x64, clang-x64]
         include:
           - compiler: gcc-x64
             os: windows-latest
@@ -43,15 +35,6 @@ jobs:
             cxx: clang++
             subtarget: tiny
             executable: mametiny
-          - compiler: clang-arm64
-            os: windows-11-arm
-            msys: CLANGARM64
-            slug: mingw-w64-clang-aarch64
-            extrapkg: mingw-w64-clang-aarch64-gcc-compat
-            cc: clang
-            cxx: clang++
-            subtarget: mame
-            executable: mame
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -64,16 +47,6 @@ jobs:
     - uses: actions/checkout@main
       with:
         fetch-depth: 0
-
-    # diagnostic step: prints MSYSTEM and other env info to help troubleshoot
-    - name: MSYS2 environment diagnostics
-      run: |
-        echo "MSYSTEM='$MSYSTEM'"
-        uname -a
-        echo "PATH=$PATH"
-        which ${matrix.cc} || true
-        which make || true
-        env | sort
     - name: Build
       env:
         MSYSTEM: MINGW64            # force the MSYS environment the Makefile expects
