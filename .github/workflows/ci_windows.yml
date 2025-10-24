@@ -50,6 +50,7 @@ jobs:
     - name: Build
       env:
         MSYSTEM: MINGW64            # force the MSYS environment the Makefile expects
+        MINGW64: ${{ matrix.msys }}   # set to "MINGW64" (matrix.msys is already MINGW64)
         OVERRIDE_AR: "llvm-ar"
         OVERRIDE_CC: ${{ matrix.cc }}
         OVERRIDE_CXX: ${{ matrix.cxx }}
