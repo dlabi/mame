@@ -59,7 +59,7 @@ jobs:
         TOOLS: 1
         NOWERROR: 1
         SOURCES: src/mame/sord/m5.cpp
-      run: make -j3
+      run: make -j3 -w
     - name: Validate
       run: ./${{ matrix.executable }}.exe -validate
     - uses: actions/upload-artifact@main
