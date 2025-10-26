@@ -17,7 +17,7 @@ Todo:
 #include "gaelco_ds5002fp.h"
 
 #include "cpu/m68000/m68000.h"
-#include "cpu/mcs51/mcs51.h"
+#include "cpu/mcs51/ds5002fp.h"
 #include "machine/74259.h"
 #include "sound/okim6295.h"
 
@@ -472,7 +472,7 @@ static INPUT_PORTS_START( ssplash10 )
 	PORT_DIPSETTING(    0x05, DEF_STR( 1C_6C ) )
 	PORT_DIPSETTING(    0x00, DEF_STR( Free_Play ) )
 
-	PORT_MODIFY("DSW2") 
+	PORT_MODIFY("DSW2")
 	PORT_DIPNAME( 0xc0, 0xc0, DEF_STR( Difficulty ) ) PORT_DIPLOCATION("SW2:1,2")
 	PORT_DIPSETTING(    0x40, DEF_STR( Easy ) )
 	PORT_DIPSETTING(    0xc0, DEF_STR( Normal ) )

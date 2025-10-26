@@ -634,6 +634,9 @@ ROM_START(cueballv)
 
 	ROM_REGION(0x10000, "p7sound:speechcpu", ROMREGION_ERASEFF)
 	ROM_LOAD("yrom1.bin", 0x8000, 0x8000, CRC(c22f5cc5) SHA1(a5bfbc1824bc483eecc961851bd411cb0dbcdc4a))
+
+	ROM_REGION(0x117, "pld", ROMREGION_ERASEFF)
+	ROM_LOAD("gal16v8.u8", 0x000, 0x117, CRC(e12f9d12) SHA1(e3eedf459898d80208c3a0743b80d34b3a765ea1))
 ROM_END
 
 /*-------------------------------------------------------------------
@@ -1189,7 +1192,7 @@ ROM_START(smbpv)
 ROM_END
 
 /* Earlier than 'smbpv'. Lacks adjustments #57 and #58. It also defaults to 24 max. credits in German and Spanish setting.
-   Has Spanish instead of French texts, and shows "VIFICO" instead of "GAME OVER" in attract mode. */ 
+   Has Spanish instead of French texts, and shows "VIFICO" instead of "GAME OVER" in attract mode. */
 ROM_START(smbpva)
 	ROM_REGION(0x10000, "maincpu", ROMREGION_ERASEFF)
 	ROM_LOAD("gprom_27c512.u2", 0x0000, 0x10000, CRC(d2db2f09) SHA1(6327812d352fecde3a4e63b36fea923c4586da74)) // Same as "smbp" but changing the string 'LES GAGNANTS DISENT "NON" A LA DROGUE' to 'SERVICIO TECNICO DE VIFICO 95/2238827'
